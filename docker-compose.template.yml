@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   openclaw-{{AGENT_NAME}}:
-    image: openclaw/openclaw:latest
+    image: openclaw:local
     container_name: openclaw-{{AGENT_NAME}}
     user: "${UID}:${GID}"
     ports:
