@@ -19,10 +19,12 @@ git clone https://github.com/mableclaw/dockered_openclaw_agent_incubator.git
 cd dockered_openclaw_agent_incubator
 
 # 2. Spawn your first agent (interactive — will ask for API keys)
-./spawn_agent.sh my-agent 18800
+./spawn_agent.sh my-agent
 ```
 
-The spawner will ask if you want to provide your API keys now. If you say **yes**, it injects them into the agent's `.env`, pulls the image, and launches the container — your agent is live at `http://localhost:18800` immediately.
+The spawner auto-selects the next available port (starting at **18790**) and generates a secure gateway token via `openssl rand -hex 32`, injecting it into the agent's `.env` automatically — no manual token management needed.
+
+It will ask if you want to provide your API keys now. If you say **yes**, it injects them into the agent's `.env`, pulls the image, and launches the container — your agent is live immediately.
 
 If you say **no**, the container still launches but you'll need to complete onboarding via `docker attach openclaw-my-agent`.
 
@@ -35,26 +37,39 @@ Pre-configure your keys once in `.env.template`, then spawn agents hands-free:
 nano .env.template  # Set ANTHROPIC_API_KEY (and optionally BRAVE_API_KEY, GITHUB_TOKEN)
 
 # 2. Spawn with --auto — no prompts, keys injected automatically
-./spawn_agent.sh my-agent 18800 --auto
+./spawn_agent.sh my-agent --auto
 ```
 
 ## Usage
 
 ```bash
-# Spawn an agent (interactive mode — prompts for API keys)
+# Spawn an agent (auto port selection)
+./spawn_agent.sh <agent-name>
+
+# Spawn with an explicit port
 ./spawn_agent.sh <agent-name> <port>
 
-# Spawn an agent (auto mode — injects keys from .env.template, no prompts)
-./spawn_agent.sh <agent-name> <port> --auto
+# Auto mode (no prompts, keys from .env.template)
+./spawn_agent.sh <agent-name> [port] --auto
 
 # Examples
-./spawn_agent.sh research-bot 18801
-./spawn_agent.sh code-reviewer 18802 --auto
-./spawn_agent.sh personal-assistant 18803
+./spawn_agent.sh research-bot              # auto-picks next port (18790, 18791, ...)
+./spawn_agent.sh code-reviewer 18795       # uses port 18795 explicitly
+./spawn_agent.sh personal-assistant --auto # auto port + auto mode
 
 # Show help
 ./spawn_agent.sh --help
 ```
+
+### Port Selection
+
+The **port argument is optional**. When omitted, the script scans all existing `deployed_agents/*/docker-compose.yml` files for host port mappings, finds the highest one, and increments by 1. If no agents exist yet, it defaults to **18790**.
+
+When a port is provided, it's used as-is (direct port number, not an offset).
+
+### Security — Auto-Generated Gateway Tokens
+
+Each spawned agent receives a unique, secure gateway token generated via `openssl rand -hex 32`. This token is automatically injected into the agent's `.env` file as `OPENCLAW_GATEWAY_TOKEN` and `GATEWAY_TOKEN`. You don't need to create or manage tokens manually.
 
 ### Flags
 
@@ -157,9 +172,9 @@ http://openclaw-code-reviewer:18789
 ### Example
 
 ```bash
-# Spawn two agents
-./spawn_agent.sh agent-alpha 18801
-./spawn_agent.sh agent-beta 18802
+# Spawn two agents (ports auto-assigned: 18790, 18791)
+./spawn_agent.sh agent-alpha
+./spawn_agent.sh agent-beta
 
 # From inside agent-alpha, you can reach agent-beta at:
 # http://openclaw-agent-beta:18789

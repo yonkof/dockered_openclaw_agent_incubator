@@ -30,11 +30,13 @@ done
 usage() {
     echo -e "${BOLD}🐙 OpenClaw Agent Spawner${NC}"
     echo
-    echo -e "Usage: ${CYAN}./spawn_agent.sh <agent-name> <port> [--auto]${NC}"
+    echo -e "Usage: ${CYAN}./spawn_agent.sh <agent-name> [port] [--auto]${NC}"
     echo
     echo -e "Arguments:"
     echo -e "  ${BOLD}agent-name${NC}   Unique name for the agent (alphanumeric, hyphens, underscores)"
-    echo -e "  ${BOLD}port${NC}         Host port to expose (1024-65535)"
+    echo -e "  ${BOLD}port${NC}         (Optional) Host port to expose (1024-65535)."
+    echo -e "               If omitted, auto-selects the next available port by scanning"
+    echo -e "               existing agents. Starts at 18790 if no agents exist."
     echo
     echo -e "Flags:"
     echo -e "  ${BOLD}--auto${NC}       Skip interactive prompts; inject API keys from .env.template"
@@ -42,8 +44,9 @@ usage() {
     echo -e "               Pulls the image and launches the container without user input."
     echo
     echo -e "Examples:"
-    echo -e "  ./spawn_agent.sh research-bot 18801"
-    echo -e "  ./spawn_agent.sh code-reviewer 18802 --auto"
+    echo -e "  ./spawn_agent.sh my-agent              # auto-picks next available port"
+    echo -e "  ./spawn_agent.sh research-bot 18795     # uses port 18795"
+    echo -e "  ./spawn_agent.sh code-reviewer 18795 --auto  # port 18795, auto mode"
     echo
     echo -e "Each agent is created under ${CYAN}deployed_agents/<agent-name>/${NC}"
     exit 0
@@ -65,10 +68,34 @@ for arg in "$@"; do
     esac
 done
 
-[[ ${#POSITIONAL[@]} -ne 2 ]] && die "Expected 2 arguments: <agent-name> <port>\n  Run with --help for usage."
+[[ ${#POSITIONAL[@]} -lt 1 || ${#POSITIONAL[@]} -gt 2 ]] && die "Expected 1-2 arguments: <agent-name> [port]\n  Run with --help for usage."
 
 AGENT_NAME="${POSITIONAL[0]}"
-PORT="${POSITIONAL[1]}"
+
+# --- Determine port (auto-increment or explicit) ---
+if [[ ${#POSITIONAL[@]} -ge 2 ]]; then
+    PORT="${POSITIONAL[1]}"
+else
+    # Auto-detect: scan deployed agents for highest port, increment by 1
+    DEFAULT_PORT=18790
+    HIGHEST_PORT=0
+    if [[ -d "$DEPLOY_DIR" ]]; then
+        for compose_file in "${DEPLOY_DIR}"/*/docker-compose.yml; do
+            [[ -f "$compose_file" ]] || continue
+            # Extract host port from "HOST:CONTAINER" mapping
+            FOUND_PORT=$(grep -oP '^\s*-\s*"\K[0-9]+(?=:)' "$compose_file" 2>/dev/null | head -1)
+            if [[ -n "$FOUND_PORT" && "$FOUND_PORT" -gt "$HIGHEST_PORT" ]]; then
+                HIGHEST_PORT="$FOUND_PORT"
+            fi
+        done
+    fi
+    if (( HIGHEST_PORT > 0 )); then
+        PORT=$(( HIGHEST_PORT + 1 ))
+    else
+        PORT=$DEFAULT_PORT
+    fi
+    info "Auto-selected port ${BOLD}${PORT}${NC}"
+fi
 
 # --- Validate agent name ---
 [[ "$AGENT_NAME" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]] || \
