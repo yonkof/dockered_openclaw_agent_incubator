@@ -1,0 +1,12 @@
+# Deployed agent directories (each is self-contained)
+deployed_agents/*/
+
+# Keep the directory itself
+!deployed_agents/.gitkeep
+
+# Environment files with secrets
+.env
+
+# OS files
+.DS_Store
+Thumbs.db

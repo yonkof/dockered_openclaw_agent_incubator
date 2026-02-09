@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  openclaw-{{AGENT_NAME}}:
+    image: openclaw/openclaw:latest
+    container_name: openclaw-{{AGENT_NAME}}
+    ports:
+      - "{{PORT}}:18789"
+    env_file:
+      - .env
+    volumes:
+      - ./workspace:/app/workspace
+      - ./config:/root/.openclaw
+    restart: unless-stopped
