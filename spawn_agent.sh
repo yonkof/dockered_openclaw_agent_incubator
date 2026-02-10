@@ -212,7 +212,7 @@ show_live_card() {
 
 # Helper: show success card — "onboarding needed" variant
 show_onboarding_card() {
-    local ATTACH_CMD="docker attach openclaw-${AGENT_NAME}"
+    local ATTACH_CMD="docker exec -it openclaw-${AGENT_NAME} npx openclaw configure"
     echo
     echo -e "${GREEN}╔══════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║${NC}  ${BOLD}🐙 Agent spawned — onboarding needed${NC}                ${GREEN}║${NC}"
