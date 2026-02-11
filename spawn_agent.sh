@@ -135,13 +135,20 @@ GATEWAY_TOKEN=$(openssl rand -hex 32)
 # --- Create agent directory ---
 info "Spawning agent ${BOLD}${AGENT_NAME}${NC} on port ${BOLD}${PORT}${NC}..."
 
-mkdir -p "${AGENT_DIR}/workspace" "${AGENT_DIR}/config"
+mkdir -p "${AGENT_DIR}/workspace" "${AGENT_DIR}/config" "${AGENT_DIR}/scripts"
 
 # --- Generate docker-compose.yml from template ---
 sed -e "s/{{AGENT_NAME}}/${AGENT_NAME}/g" \
     -e "s/{{PORT}}/${PORT}/g" \
     "$TEMPLATE_COMPOSE" > "${AGENT_DIR}/docker-compose.yml"
 ok "Created docker-compose.yml"
+
+# --- Copy bootstrap script and manifests ---
+cp "${SCRIPT_DIR}/scripts/bootstrap.sh" "${AGENT_DIR}/scripts/bootstrap.sh"
+chmod +x "${AGENT_DIR}/scripts/bootstrap.sh"
+cp "${SCRIPT_DIR}/requirements.txt" "${AGENT_DIR}/requirements.txt"
+cp "${SCRIPT_DIR}/apt-packages.txt" "${AGENT_DIR}/apt-packages.txt"
+ok "Copied bootstrap script and package manifests"
 
 # --- Copy and configure .env ---
 cp "$TEMPLATE_ENV" "${AGENT_DIR}/.env"

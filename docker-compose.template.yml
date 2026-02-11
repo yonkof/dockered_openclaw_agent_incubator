@@ -11,6 +11,11 @@ services:
     volumes:
       - ./workspace:/app/workspace
       - ./config:/root/.openclaw
+      - ./scripts/bootstrap.sh:/usr/local/bin/bootstrap-agent:ro
+      - ./requirements.txt:/home/node/requirements.txt:ro
+      - ./apt-packages.txt:/home/node/apt-packages.txt:ro
+    entrypoint: ["/usr/local/bin/bootstrap-agent"]
+    command: ["node", "/app/dist/index.js"]
     networks:
       - openclaw-fleet
     restart: unless-stopped

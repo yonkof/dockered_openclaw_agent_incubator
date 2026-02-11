@@ -95,8 +95,11 @@ dockered_openclaw_agent_incubator/
 ├── README.md                      # You are here
 ├── .env.template                  # Environment variable blueprint
 ├── docker-compose.template.yml    # Compose template with placeholders
-├── Dockerfile.custom              # Agent-specific dependencies (gog, himalaya, etc.)
 ├── spawn_agent.sh                 # Factory script — creates new agents
+├── scripts/
+│   └── bootstrap.sh               # Startup script — restores tools on every boot
+├── requirements.txt               # Default Python packages for new agents
+├── apt-packages.txt               # Default OS packages for new agents
 ├── deployed_agents/               # All spawned agents live here
 │   └── .gitkeep
 └── .gitignore
@@ -241,6 +244,60 @@ http://openclaw-code-reviewer:18789
 # From inside agent-alpha, you can reach agent-beta at:
 # http://openclaw-agent-beta:18789
 ```
+
+## 🔌 Persistence & Custom Skills
+
+### The Problem
+
+Docker containers are **ephemeral** — any tools, libraries, or packages you install manually inside a running container will vanish the moment it restarts. This means:
+
+- `pip install pandas` → **gone** after restart
+- `apt-get install jq` → **gone** after restart
+- Downloaded binaries → **gone** after restart
+
+### The Solution
+
+Every agent includes a **bootstrap script** (`scripts/bootstrap.sh`) that runs automatically on container startup. It:
+
+1. **Restores Core Skills** — Installs `gog` (Google Workspace CLI), `himalaya` (email client), and ensures `python3`/`pip` are available
+2. **Installs OS packages** — Reads from `apt-packages.txt` and installs any listed system tools
+3. **Installs Python packages** — Reads from `requirements.txt` and installs any listed Python libraries
+
+This means your agent's tools survive restarts — no manual reinstallation needed.
+
+### How-To
+
+**To add a Python library:**
+```bash
+# Edit requirements.txt in your agent's directory
+echo "numpy" >> deployed_agents/my-agent/requirements.txt
+```
+
+**To add a system tool:**
+```bash
+# Edit apt-packages.txt in your agent's directory
+echo "jq" >> deployed_agents/my-agent/apt-packages.txt
+```
+
+On next restart, the bootstrap script picks up the changes automatically.
+
+### File Structure
+
+```
+deployed_agents/my-agent/
+├── scripts/
+│   └── bootstrap.sh          # Runs on every container start
+├── requirements.txt           # Python packages (one per line)
+├── apt-packages.txt           # OS packages (one per line)
+├── docker-compose.yml
+├── .env
+├── workspace/
+└── config/
+```
+
+### Customizing Core Skills
+
+To change which tools are pre-installed for all agents, edit `scripts/bootstrap.sh` in the repo root. The spawner copies this script into each new agent's directory.
 
 ## License
 
